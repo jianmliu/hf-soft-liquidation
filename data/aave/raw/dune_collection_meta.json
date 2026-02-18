@@ -1,0 +1,9 @@
+{
+  "fetched_at": "2026-02-17T11:44:14.892056+00:00",
+  "liquidation_query_id": 2104473,
+  "positions_query_id": null,
+  "liquidation_events_count": 100,
+  "positions_count": 0,
+  "positions_written": false,
+  "price_rows_by_symbol": {}
+}

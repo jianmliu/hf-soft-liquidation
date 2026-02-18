@@ -1,0 +1,30 @@
+# OS / editor
+.DS_Store
+.vscode/
+
+# Local tooling
+.venv/
+.claude/
+__pycache__/
+*.pyc
+
+# Python env / caches
+.pytest_cache/
+.mypy_cache/
+
+# Simulation outputs and local runs
+runs/
+
+# LaTeX build artifacts
+doc/*.aux
+doc/*.bbl
+doc/*.blg
+doc/*.fdb_latexmk
+doc/*.fls
+doc/*.log
+doc/*.out
+doc/*.synctex.gz
+doc/main.pdf
+
+# Notebook / temp
+*.ipynb_checkpoints

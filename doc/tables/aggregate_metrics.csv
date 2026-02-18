@@ -1,0 +1,2 @@
+num_loans,avg_impermanent_loss_pct,avg_protocol_profit_usd,avg_min_cr,avg_min_hf,avg_max_ltv,max_bad_debt_usd,source
+5,26.290474684590702,-2.2737367544323207e-14,1.2522506420640922,1.0644130457544787,0.7987139101980363,0.0,synthetic

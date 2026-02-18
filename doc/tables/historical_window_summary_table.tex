@@ -1,0 +1,21 @@
+\begin{table}[h!]
+\centering
+\caption{Historical-window backtest summary (constrained sweep, \texttt{historical\_window\_sweep\_results\_20260218\_082620.csv}).}
+\label{tab:historical_window_summary}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Metric & Value \\
+\midrule
+Total rolling windows per candidate & 24 \\
+Active windows (non-zero liquidation outcomes) & 11 \\
+Buyback vs no-buyback win-rate (active windows) & 54.55\% (6/11) \\
+Target-HF-no-buyback vs fixed-CF win-rate (active windows) & 45.45\% (5/11) \\
+Candidates in constrained sweep & 24 \\
+Candidates with buyback mean loss $<$ no-buyback mean loss & 91.67\% (22/24) \\
+Candidates with target-HF-no-buyback mean loss $<$ fixed-CF mean loss & 0.00\% (0/24) \\
+Bad-debt cap (USD) & 1{,}000 \\
+Bad-debt-feasible candidates & 0.00\% (0/24) \\
+Best-candidate worst-window bad debt (buyback, USD) & 4{,}224.47 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,4 @@
+account,asset_symbol,collateral_amount,debt_amount,liquidation_threshold
+0xsample001,WETH,80.0,120000.0,0.83
+0xsample002,WETH,52.0,76000.0,0.83
+0xsample003,WETH,35.0,54000.0,0.83

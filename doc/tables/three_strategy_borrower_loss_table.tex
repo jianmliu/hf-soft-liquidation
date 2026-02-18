@@ -1,0 +1,28 @@
+\begin{table}[h!]
+\centering
+\caption{Three-strategy comparison on borrower final loss (120 paired runs).}
+\label{tab:three_strategy_borrower_loss}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Strategy & Mean loss (USD) & Median loss (USD) & Mean min HF & Worst bad debt (USD) \\
+\midrule
+Traditional fixed CF & 18,294.46 & 18,107.55 & 0.7599 & 20,778.22 \\
+Target-HF (no buyback) & 15,705.80 & 15,048.87 & 1.1461 & 0.00 \\
+Target-HF + buyback & 15,300.23 & 15,124.77 & 1.1420 & 0.00 \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{0.35em}
+
+\begin{tabular}{@{}p{0.64\textwidth}r@{}}
+\toprule
+Pairwise borrower-loss win-rate (lower is better) & Value \\
+\midrule
+Target-HF + buyback vs Traditional fixed CF & 91.67\% (tie 8.33\%) \\
+Target-HF + buyback vs Target-HF (no buyback) & 74.17\% (tie 8.33\%) \\
+Target-HF (no buyback) vs Traditional fixed CF & 91.67\% (tie 8.33\%) \\
+\bottomrule
+\end{tabular}
+\end{table}

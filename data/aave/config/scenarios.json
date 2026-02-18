@@ -1,0 +1,47 @@
+[
+  {
+    "name": "baseline_dynamic",
+    "dynamic": {
+      "lltv": 0.72,
+      "min_close_factor": 0.15,
+      "max_close_factor": 0.60,
+      "cf_slope": 1.60,
+      "liquidation_bonus": 0.01,
+      "buyback_ratio": 0.20,
+      "buyback_funding": "reborrow",
+      "enable_buyback": true,
+      "recovery_ltv_gap": 0.00,
+      "sell_cooldown_steps": 1,
+      "buy_cooldown_steps": 1
+    }
+  },
+  {
+    "name": "target_hf_no_buyback",
+    "dynamic": {
+      "lltv": 0.72,
+      "min_close_factor": 0.15,
+      "max_close_factor": 0.60,
+      "cf_slope": 1.60,
+      "liquidation_bonus": 0.01,
+      "buyback_ratio": 0.20,
+      "buyback_funding": "reborrow",
+      "enable_buyback": false,
+      "recovery_ltv_gap": 0.00,
+      "sell_cooldown_steps": 1,
+      "buy_cooldown_steps": 1000000
+    }
+  },
+  {
+    "name": "traditional_fixed_cf",
+    "buyback_bandwidth": 10.0,
+    "tiers": [
+      {
+        "name": "Fixed CF 50%",
+        "hf_down": 1.01,
+        "close_factor": 0.50,
+        "liquidation_bonus": 0.06,
+        "buyback_ratio": 0.70
+      }
+    ]
+  }
+]
