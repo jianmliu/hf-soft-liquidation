@@ -1,15 +1,15 @@
 \begin{table}[h!]
 \centering
-\caption{Three-strategy comparison on borrower final loss (120 paired runs).}
+\caption{Three-strategy comparison on borrower final loss (600 paired runs).}
 \label{tab:three_strategy_borrower_loss}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}lrrrr@{}}
+\begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Strategy & Mean loss (USD) & Median loss (USD) & Mean min HF & Worst bad debt (USD) \\
+Strategy & Mean loss (USD) & Median loss (USD) & Mean min HF & Mean restoration $\rho$ & Worst bad debt (USD) \\
 \midrule
-Traditional fixed CF & 18,294.46 & 18,107.55 & 0.7599 & 20,778.22 \\
-Target-HF (no buyback) & 15,705.80 & 15,048.87 & 1.1461 & 0.00 \\
-Target-HF + buyback & 15,300.23 & 15,124.77 & 1.1420 & 0.00 \\
+Traditional fixed CF & 14,359.80 & 2,753.10 & 0.9827 & 0.5842 & 27,623.95 \\
+Target-HF (no buyback) & 13,302.58 & 0.00 & 1.0270 & 0.5922 & 0.00 \\
+Target-HF + buyback (guarded) & 13,254.97 & 0.00 & 1.0270 & 0.5944 & 0.00 \\
 \bottomrule
 \end{tabular}
 }
@@ -20,9 +20,9 @@ Target-HF + buyback & 15,300.23 & 15,124.77 & 1.1420 & 0.00 \\
 \toprule
 Pairwise borrower-loss win-rate (lower is better) & Value \\
 \midrule
-Target-HF + buyback vs Traditional fixed CF & 91.67\% (tie 8.33\%) \\
-Target-HF + buyback vs Target-HF (no buyback) & 74.17\% (tie 8.33\%) \\
-Target-HF (no buyback) vs Traditional fixed CF & 91.67\% (tie 8.33\%) \\
+Target-HF + buyback vs Traditional fixed CF & 38.67\% (tie 44.33\%) \\
+Target-HF + buyback vs Target-HF (no buyback) & 9.00\% (tie 90.50\%) \\
+Target-HF (no buyback) vs Traditional fixed CF & 38.17\% (tie 44.33\%) \\
 \bottomrule
 \end{tabular}
 \end{table}
