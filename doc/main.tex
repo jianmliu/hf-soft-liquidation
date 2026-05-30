@@ -147,13 +147,13 @@ Key configuration dimensions are as follows: loan notional and initial CR define
 
 \subsection{Real-window stress-batch evidence}
 We use a $600$-run stress batch formed by $200$ distinct windows sampled from the real normalized ETH price series crossed with three initial collateralizations $\mathrm{CR}_0\in\{1.25,1.35,1.50\}$ (all above the trigger $1/\mathrm{LLTV}$), the loan being initialized at $\mathrm{CR}_0$ at its window start price. The multiple CR levels increase the number of \emph{informative} (non-tie) paired comparisons and hence statistical power. (Under initial-CR normalization a uniform price shock cancels from the CR path, so stress is induced by genuine sampled drawdown/rebound dynamics rather than by synthetic multiplicative shocks.)
-Figure~\ref{fig:mechanism_path_example} provides a representative execution trace with loan start times and sell/buy trigger events.
+Figure~\ref{fig:mechanism_path_example} illustrates the mechanism on a representative decline-then-rebound path.
 
 \IfFileExists{figures/price_grid_loans_tiers.png}{
 \begin{figure}[h!]
 \centering
-\includegraphics[width=0.82\textwidth]{figures/price_grid_loans_tiers.png}
-\caption{Representative path with loan start times and partial-liquidation events (mechanism illustration).}
+\includegraphics[width=0.86\textwidth]{figures/price_grid_loans_tiers.png}
+\caption{Mechanism illustration on a healthy-start ($\mathrm{CR}_0=1.30$) decline-then-rebound path. As price falls, target-HF partial liquidations sell collateral (red, band top) and record the endogenous sell band (shaded); as price rebounds, guarded buybacks re-acquire collateral below the matched sell levels (teal, band bottom). The health factor (right axis) is repaired toward target on each sell and held above $1$ by the re-leverage floor on each buy. Illustrative operating point ($\mathrm{HF}^{\text{floor}}=1.10$, $\eta=1$) so the recovery buys are visible.}
 \label{fig:mechanism_path_example}
 \end{figure}
 }{}
