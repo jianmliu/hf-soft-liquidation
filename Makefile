@@ -1,4 +1,5 @@
-PYTHON := /Volumes/T7-Data/D^2/band-soft-liquidation/.venv/bin/python
+# Portable: defaults to the project venv, override with e.g. `make PYTHON=python3 ...`.
+PYTHON ?= ./.venv/bin/python
 
 .PHONY: reproduce cf-init cf-validate cf-sim cf-report cf-batch cf-batch-topn cf-batch-closures cf-collect-subgraph cf-collect-dune cf-list-presets cf-bootstrap-market
 reproduce:
