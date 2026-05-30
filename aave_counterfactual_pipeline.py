@@ -1511,26 +1511,27 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                     if should_buy:
                         target_buy = policy.buyback_ratio * dynamic_state["sold_qty"]
                         remaining_target = max(0.0, target_buy - dynamic_state["bought_qty"])
-                        buy_lot = None
+                        # Band-bottom buy: trigger when the price is below the band
+                        # (an open sell lot priced above (1+s)*P_t exists). The recovery
+                        # quantity is NOT a 1:1 match to any single sell lot; it is sized
+                        # by solvency (the HF-floor reborrow cap) and the aggregate band
+                        # inventory, and consumed across lots from the band top down.
+                        eligible: list[dict] = []
                         if remaining_target > 0:
                             spread_gate = price * (1.0 + policy.min_buyback_spread)
-                            open_lots = [
-                                lot
-                                for lot in dynamic_state["sell_lots"]
-                                if lot["qty"] > 0
-                                and lot["sell_price"] > spread_gate
-                            ]
-                            if open_lots:
-                                buy_lot = max(open_lots, key=lambda lot: lot["sell_price"])
+                            eligible = sorted(
+                                (lot for lot in dynamic_state["sell_lots"]
+                                 if lot["qty"] > 0 and lot["sell_price"] > spread_gate),
+                                key=lambda lot: lot["sell_price"],
+                                reverse=True,  # band top (highest sell price) first
+                            )
 
                         buy_qty = 0.0
-                        if buy_lot is not None:
-                            lot_qty = float(buy_lot["qty"])
+                        if eligible:
                             if policy.buyback_hf_floor is not None and policy.buyback_hf_floor > lt:
-                                # Cap reborrow so post-buy HF stays >= floor: buying adds
-                                # equal USD of collateral and debt, which lowers HF, so we
-                                # bound the spend to preserve a solvency buffer and avoid
-                                # re-triggering liquidation (ping-pong guard).
+                                # Solvency cap: keep post-buy HF >= floor. Buying adds equal
+                                # USD of collateral and debt, lowering HF, so this cap (not a
+                                # lot match) is what sizes the recovery and blocks ping-pong.
                                 floor = policy.buyback_hf_floor
                                 borrow_capacity_usd = max(
                                     0.0, (collateral * price * lt - floor * debt) / (floor - lt)
@@ -1538,9 +1539,10 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                             else:
                                 borrow_capacity_usd = max(0.0, collateral * price * policy.lltv - debt)
                             affordable_qty = max(0.0, borrow_capacity_usd / price)
-                            buy_qty = min(lot_qty, remaining_target, affordable_qty)
+                            eligible_qty = sum(float(lot["qty"]) for lot in eligible)
+                            buy_qty = max(0.0, min(remaining_target, affordable_qty, eligible_qty))
 
-                        if buy_lot is not None and buy_qty > 0:
+                        if buy_qty > 0:
                             buy_cost = buy_qty * price
                             reserve_change = 0.0
                             debt_change = buy_cost
@@ -1550,7 +1552,14 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                             debt += debt_change
                             dynamic_state["bought_qty"] += buy_qty
                             dynamic_state["outstanding_qty"] -= buy_qty
-                            buy_lot["qty"] = max(0.0, float(buy_lot["qty"]) - buy_qty)
+                            # Consume the bought quantity across the band, top first.
+                            remaining_buy = buy_qty
+                            for lot in eligible:
+                                if remaining_buy <= 1e-15:
+                                    break
+                                take = min(float(lot["qty"]), remaining_buy)
+                                lot["qty"] = max(0.0, float(lot["qty"]) - take)
+                                remaining_buy -= take
                             dynamic_state["last_buy_block"] = block_number
 
                             total_buy_usd += buy_cost
