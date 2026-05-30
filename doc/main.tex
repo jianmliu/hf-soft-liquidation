@@ -191,6 +191,13 @@ Because the per-run buyback benefit on real windows is modest, we confirm its di
 \input{tables/stress_regime_comparison_table.tex}
 }{}
 
+\paragraph{The health-factor floor as a governance dial.}
+The floor $\mathrm{HF}^{\text{floor}}$ is the single parameter that trades restoration against re-leverage, and it exposes a clean frontier (Table~\ref{tab:hf_floor_frontier}, buyback ratio $\eta=1$ so the floor is the sole governor). As the floor is lowered, the buyback restores more collateral and reduces borrower loss more on average---dramatically so in crashes (e.g.\ $\$5{,}738$ at $\mathrm{HF}^{\text{floor}}=1.05$ vs $\$894$ at $1.20$)---but it harms a growing minority of borrowers and induces more re-liquidation (extra sells per run rising from $\approx0$ to $1.5$ at the naive borrow-to-LLTV extreme). Notably, \emph{bad debt remains zero at every floor}: the target-HF sell side keeps the protocol solvent, so the floor governs borrower-side restoration-vs-re-leverage, not protocol insolvency. Two operating points are natural: $\mathrm{HF}^{\text{floor}}=1.20$ is \emph{Pareto-safe}---it essentially never makes any borrower worse off ($3/600$ losses) while still significantly reducing loss and restoring collateral---and $\mathrm{HF}^{\text{floor}}=1.10$ delivers a markedly larger net benefit ($\$137$ real, $\$3{,}264$ crash, $p<10^{-4}$) at the cost of harming a small minority ($23/600$). We adopt $1.20$ as the default and treat the dial as a governance choice between Pareto-safety and net-benefit maximization.
+
+\IfFileExists{tables/hf_floor_frontier_table.tex}{
+\input{tables/hf_floor_frontier_table.tex}
+}{}
+
 \subsection{Rolling historical-window backtest and constrained sweep}
 To reduce single-path bias, we run rolling-window backtests on normalized historical ETH price series. Loan start/end indices are sampled inside windows (with minimum active duration), so policy comparison reflects diverse local trend/reversal structures rather than boundary-anchored starts.
 
