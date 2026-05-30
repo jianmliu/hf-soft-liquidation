@@ -1,0 +1,19 @@
+\begin{table}[h!]
+\centering
+\caption{Robustness of the guarded buyback across two stress regimes: real sampled ETH windows vs.\ synthetic deep-crash paths. Buyback reduces borrower loss and restores more collateral in both, with no induced re-liquidation and zero bad debt.}
+\label{tab:stress_regime_comparison}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Metric & Real windows & Synthetic crash \\
+\midrule
+Runs (paired) & 600 & 120 \\
+Informative (non-tie) pairs & 57 & 77 \\
+Buyback win / lose & 54 / 3 & 77 / 0 \\
+Mean loss reduction, no-buy $-$ buy (USD) & 47.61 & 1,090.05 \\
+Wilcoxon $p$ (buyback reduces loss) & $5.4\times10^{-11}$ & $1.2\times10^{-14}$ \\
+Mean restoration $\rho$: buyback & 0.5944 & 0.2492 \\
+Mean restoration $\rho$: no-buyback & 0.5922 & 0.2282 \\
+Mean restoration $\rho$: fixed CF & 0.5842 & 0.1616 \\
+\bottomrule
+\end{tabular}
+\end{table}

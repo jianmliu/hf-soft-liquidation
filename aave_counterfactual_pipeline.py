@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import itertools
 import re
@@ -67,6 +68,14 @@ class DynamicPolicy:
     sell_cooldown_steps: int
     buy_cooldown_steps: int
     enable_buyback: bool
+    target_hf: float | None = None
+    # Buyback re-leverage guard: cap reborrow so post-buy HF stays >= this floor
+    # (prevents buyback from pushing the position back toward liquidation). If
+    # None, fall back to borrowing up to the LLTV limit (legacy behaviour).
+    buyback_hf_floor: float | None = None
+    # Require the matched sell price to exceed the current price by at least this
+    # fraction (a stricter positive-spread guard than P_t < P_sell).
+    min_buyback_spread: float = 0.0
 
 
 @dataclass
@@ -958,6 +967,11 @@ def build_dynamic_policy(raw: dict[str, Any]) -> DynamicPolicy:
     sell_cooldown_steps = int(raw.get("sell_cooldown_steps", 1))
     buy_cooldown_steps = int(raw.get("buy_cooldown_steps", 1))
     enable_buyback = bool(raw.get("enable_buyback", True))
+    target_hf_raw = raw.get("target_hf", None)
+    target_hf = float(target_hf_raw) if target_hf_raw is not None else None
+    buyback_hf_floor_raw = raw.get("buyback_hf_floor", None)
+    buyback_hf_floor = float(buyback_hf_floor_raw) if buyback_hf_floor_raw is not None else None
+    min_buyback_spread = float(raw.get("min_buyback_spread", 0.0))
 
     if not (0 < lltv < 1):
         raise DatasetError("dynamic.lltv must be in (0, 1)")
@@ -979,6 +993,12 @@ def build_dynamic_policy(raw: dict[str, Any]) -> DynamicPolicy:
         raise DatasetError("dynamic.recovery_ltv_gap must be >= 0")
     if sell_cooldown_steps < 1 or buy_cooldown_steps < 1:
         raise DatasetError("dynamic cooldown steps must be >= 1")
+    if target_hf is not None and target_hf <= 0:
+        raise DatasetError("dynamic.target_hf must be > 0 when provided")
+    if buyback_hf_floor is not None and buyback_hf_floor <= 0:
+        raise DatasetError("dynamic.buyback_hf_floor must be > 0 when provided")
+    if min_buyback_spread < 0:
+        raise DatasetError("dynamic.min_buyback_spread must be >= 0")
 
     return DynamicPolicy(
         lltv=lltv,
@@ -992,6 +1012,9 @@ def build_dynamic_policy(raw: dict[str, Any]) -> DynamicPolicy:
         sell_cooldown_steps=sell_cooldown_steps,
         buy_cooldown_steps=buy_cooldown_steps,
         enable_buyback=enable_buyback,
+        target_hf=target_hf,
+        buyback_hf_floor=buyback_hf_floor,
+        min_buyback_spread=min_buyback_spread,
     )
 
 
@@ -999,6 +1022,33 @@ def dynamic_close_factor(ltv: float, policy: DynamicPolicy) -> float:
     exceed_ratio = max(0.0, (ltv / policy.lltv) - 1.0)
     close_factor = policy.min_close_factor + policy.cf_slope * exceed_ratio
     return float(np.clip(close_factor, policy.min_close_factor, policy.max_close_factor))
+
+
+def target_hf_debt_repaid(
+    collateral: float,
+    debt: float,
+    price: float,
+    liquidation_threshold: float,
+    policy: DynamicPolicy,
+) -> float:
+    """Target-HF partial-liquidation sizing (paper eq. 56).
+
+    Solve the debt reduction Delta D that moves the post-trade health factor to
+    HF*, accounting for the liquidation bonus on collateral sold:
+
+        Delta D* = (HF* * D - LT * C * P) / (HF* - LT * (1 + b)).
+
+    Equivalently Delta D* = D * (HF* - HF_t) / (HF* - LT * (1 + b)), so the size
+    scales with the health-factor gap. Clipped to [0, D]; if the denominator is
+    non-positive (HF* <= LT*(1+b)) the target is infeasible and we fall back to
+    full repayment, matching the close-factor==full behaviour.
+    """
+    target_hf = policy.target_hf
+    denominator = target_hf - liquidation_threshold * (1.0 + policy.liquidation_bonus)
+    if denominator <= 0:
+        return debt
+    delta_d = (target_hf * debt - liquidation_threshold * collateral * price) / denominator
+    return float(min(max(0.0, delta_d), debt))
 
 
 def load_scenarios(path: Path) -> list[Scenario]:
@@ -1359,6 +1409,13 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
             }
 
             first_price = float(asset_prices.iloc[0]["price_usd"])
+            # Optional: initialize collateral from a target initial CR at the loan's
+            # start price (C_0 = D * CR_0 / P_0), so each loan starts at a controlled
+            # health regardless of when it begins. Backward compatible: if no
+            # initial_cr column is provided, use the explicit collateral amount.
+            initial_cr_raw = pos.get("initial_cr") if "initial_cr" in positions_df.columns else None
+            if initial_cr_raw is not None and pd.notna(initial_cr_raw) and float(initial_cr_raw) > 0 and debt > 0:
+                collateral = debt * float(initial_cr_raw) / first_price
             initial_collateral = collateral
             initial_debt = debt
             min_hf = float("inf")
@@ -1388,8 +1445,13 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                         and (block_number - int(dynamic_state["last_sell_block"])) >= policy.sell_cooldown_steps
                     )
                     if should_sell:
-                        close_factor = dynamic_close_factor(ltv_now, policy)
-                        debt_repaid = min(close_factor * debt, debt)
+                        if policy.target_hf is not None:
+                            # Target-HF repair sizing (paper eq. 56).
+                            debt_repaid = target_hf_debt_repaid(collateral, debt, price, lt, policy)
+                        else:
+                            # LTV-proportional close-factor sizing.
+                            close_factor = dynamic_close_factor(ltv_now, policy)
+                            debt_repaid = min(close_factor * debt, debt)
                         collateral_sold = (1.0 + policy.liquidation_bonus) * debt_repaid / price
                         if collateral_sold > collateral:
                             collateral_sold = collateral
@@ -1451,11 +1513,12 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                         remaining_target = max(0.0, target_buy - dynamic_state["bought_qty"])
                         buy_lot = None
                         if remaining_target > 0:
+                            spread_gate = price * (1.0 + policy.min_buyback_spread)
                             open_lots = [
                                 lot
                                 for lot in dynamic_state["sell_lots"]
                                 if lot["qty"] > 0
-                                and lot["sell_price"] > price
+                                and lot["sell_price"] > spread_gate
                             ]
                             if open_lots:
                                 buy_lot = max(open_lots, key=lambda lot: lot["sell_price"])
@@ -1463,7 +1526,17 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                         buy_qty = 0.0
                         if buy_lot is not None:
                             lot_qty = float(buy_lot["qty"])
-                            borrow_capacity_usd = max(0.0, collateral * price * policy.lltv - debt)
+                            if policy.buyback_hf_floor is not None and policy.buyback_hf_floor > lt:
+                                # Cap reborrow so post-buy HF stays >= floor: buying adds
+                                # equal USD of collateral and debt, which lowers HF, so we
+                                # bound the spend to preserve a solvency buffer and avoid
+                                # re-triggering liquidation (ping-pong guard).
+                                floor = policy.buyback_hf_floor
+                                borrow_capacity_usd = max(
+                                    0.0, (collateral * price * lt - floor * debt) / (floor - lt)
+                                )
+                            else:
+                                borrow_capacity_usd = max(0.0, collateral * price * policy.lltv - debt)
                             affordable_qty = max(0.0, borrow_capacity_usd / price)
                             buy_qty = min(lot_qty, remaining_target, affordable_qty)
 
@@ -1637,6 +1710,7 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
             accounts=("account", "count"),
             avg_protocol_profit_usd=("protocol_profit_usd", "mean"),
             avg_impermanent_loss_pct=("impermanent_loss_pct", "mean"),
+            avg_restoration_ratio=("restoration_ratio", "mean"),
             avg_borrower_final_loss_usd=("borrower_final_loss_usd", "mean"),
             avg_min_hf=("min_hf", "mean"),
             avg_max_ltv=("max_ltv", "mean"),
@@ -2067,7 +2141,10 @@ def historical_backtest(
                 account = str(pos_row.get("account", ""))
                 symbol = str(pos_row.get("asset_symbol", ""))
                 key = f"{window_slug}|{account}|{symbol}"
-                digest = abs(hash(key))
+                # Deterministic digest (Python's built-in hash() is salted per
+                # process, which would make loan start/end sampling — and hence
+                # the whole backtest — irreproducible across runs).
+                digest = int(hashlib.md5(key.encode("utf-8")).hexdigest(), 16)
                 start_idx = start_low_idx + (digest % span)
                 min_end_idx = min(block_count - 1, start_idx + loan_min_duration_blocks)
                 if min_end_idx >= end_high_idx:
