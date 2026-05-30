@@ -324,9 +324,46 @@ def delta_table() -> None:
     write("delta_sensitivity_table.tex", body)
 
 
+def hf_floor_frontier_table() -> None:
+    """Restoration-vs-re-leverage frontier as HF_floor varies (governance dial)."""
+    f = ROOT / "runs" / "sweeps" / "hf_floor_sweep_results.csv"
+    if not f.exists():
+        print("skip frontier table (run hf_floor_sweep.py first)")
+        return
+    df = pd.read_csv(f)
+    real = df[df.regime == "real"].set_index("floor")
+    crash = df[df.regime == "crash"].set_index("floor")
+    order = ["LLTV", "1.05", "1.10", "1.15", "1.20", "1.25", "1.30"]
+    body_rows = []
+    for fl in order:
+        if fl not in real.index:
+            continue
+        r, c = real.loc[fl], crash.loc[fl]
+        label = "LLTV (none)" if fl == "LLTV" else fl
+        body_rows.append(
+            f"{label} & {money(r.mean_loss_reduction)} & {int(r.buyback_win)}/{int(r.buyback_lose)} & "
+            f"{r.restoration_gain:+.4f} & {r.extra_sells:+.2f} & {money(c.mean_loss_reduction)} & "
+            f"{c.restoration_gain:+.4f} & {money(max(r.worst_bad_debt, c.worst_bad_debt))} \\\\"
+        )
+    body = (
+        "\\begin{table}[h!]\n\\centering\n"
+        "\\caption{Restoration--re-leverage frontier as the buyback health-factor floor varies (governance dial; buyback ratio $\\eta=1$). Lower floors restore more and reduce loss more on average, but hurt more borrowers and induce more re-liquidation; bad debt stays zero throughout. Recommended operating points: $\\mathrm{HF}^{\\text{floor}}=1.20$ (Pareto-safe: essentially never harms a borrower) and $1.10$ (higher net benefit, tolerating a small minority of harmed borrowers).}\n"
+        "\\label{tab:hf_floor_frontier}\n"
+        "\\resizebox{\\textwidth}{!}{%\n"
+        "\\begin{tabular}{@{}lrrrrrrr@{}}\n\\toprule\n"
+        " & \\multicolumn{4}{c}{Real windows ($n=600$)} & \\multicolumn{2}{c}{Crash ($n=120$)} & \\\\\n"
+        "\\cmidrule(lr){2-5}\\cmidrule(lr){6-7}\n"
+        "$\\mathrm{HF}^{\\text{floor}}$ & $\\Delta$loss (USD) & win/lose & $\\Delta\\rho$ & extra sells & $\\Delta$loss (USD) & $\\Delta\\rho$ & Worst bad debt \\\\\n\\midrule\n"
+        + "\n".join(body_rows) + "\n"
+        + "\\bottomrule\n\\end{tabular}\n}\n\\end{table}\n"
+    )
+    write("hf_floor_frontier_table.tex", body)
+
+
 def main() -> None:
     stats_out = batch_tables()
     comparison = regime_comparison_table()
+    hf_floor_frontier_table()
     hist_summary_table()
     delta_table()
     stats_out["regime_comparison"] = comparison

@@ -1,0 +1,22 @@
+\begin{table}[h!]
+\centering
+\caption{Restoration--re-leverage frontier as the buyback health-factor floor varies (governance dial; buyback ratio $\eta=1$). Lower floors restore more and reduce loss more on average, but hurt more borrowers and induce more re-liquidation; bad debt stays zero throughout. Recommended operating points: $\mathrm{HF}^{\text{floor}}=1.20$ (Pareto-safe: essentially never harms a borrower) and $1.10$ (higher net benefit, tolerating a small minority of harmed borrowers).}
+\label{tab:hf_floor_frontier}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+ & \multicolumn{4}{c}{Real windows ($n=600$)} & \multicolumn{2}{c}{Crash ($n=120$)} & \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-7}
+$\mathrm{HF}^{\text{floor}}$ & $\Delta$loss (USD) & win/lose & $\Delta\rho$ & extra sells & $\Delta$loss (USD) & $\Delta\rho$ & Worst bad debt \\
+\midrule
+LLTV (none) & 262.65 & 129/81 & +0.0069 & +1.49 & 4,482.26 & +0.1026 & 0.00 \\
+1.05 & 120.01 & 85/72 & +0.0063 & +0.72 & 5,738.48 & +0.1201 & 0.00 \\
+1.10 & 137.18 & 78/23 & +0.0046 & +0.31 & 3,264.07 & +0.0649 & 0.00 \\
+1.15 & 29.63 & 46/42 & +0.0018 & +0.03 & 1,705.28 & +0.0338 & 0.00 \\
+1.20 & 47.61 & 54/3 & +0.0022 & +0.01 & 893.76 & +0.0177 & 0.00 \\
+1.25 & 25.88 & 47/1 & +0.0013 & +0.00 & 458.92 & +0.0093 & 0.00 \\
+1.30 & 14.70 & 37/0 & +0.0007 & +0.00 & 225.01 & +0.0046 & 0.00 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
