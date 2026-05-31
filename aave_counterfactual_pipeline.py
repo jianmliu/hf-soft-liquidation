@@ -76,6 +76,16 @@ class DynamicPolicy:
     # Require the matched sell price to exceed the current price by at least this
     # fraction (a stricter positive-spread guard than P_t < P_sell).
     min_buyback_spread: float = 0.0
+    # WHEN to buy: require a confirmed bounce off a local bottom -- the price must
+    # have recovered at least `buyback_min_bounce` above the lowest price in the
+    # last `buyback_uptrend_lookback` steps -- to avoid catching a falling knife
+    # (or buying a dead-cat bounce) during multi-leg crashes. lookback 0 disables.
+    buyback_uptrend_lookback: int = 0
+    buyback_min_bounce: float = 0.0
+    # HOW MUCH to buy: size the reborrow so the post-buy health factor stays >= 1
+    # even after a further `buyback_stress_drawdown` fractional price drop
+    # (stress-tested quantity). 0 disables; equivalent to LT -> LT*(1-d) in B*.
+    buyback_stress_drawdown: float = 0.0
 
 
 @dataclass
@@ -972,6 +982,9 @@ def build_dynamic_policy(raw: dict[str, Any]) -> DynamicPolicy:
     buyback_hf_floor_raw = raw.get("buyback_hf_floor", None)
     buyback_hf_floor = float(buyback_hf_floor_raw) if buyback_hf_floor_raw is not None else None
     min_buyback_spread = float(raw.get("min_buyback_spread", 0.0))
+    buyback_uptrend_lookback = int(raw.get("buyback_uptrend_lookback", 0))
+    buyback_min_bounce = float(raw.get("buyback_min_bounce", 0.0))
+    buyback_stress_drawdown = float(raw.get("buyback_stress_drawdown", 0.0))
 
     if not (0 < lltv < 1):
         raise DatasetError("dynamic.lltv must be in (0, 1)")
@@ -999,6 +1012,10 @@ def build_dynamic_policy(raw: dict[str, Any]) -> DynamicPolicy:
         raise DatasetError("dynamic.buyback_hf_floor must be > 0 when provided")
     if min_buyback_spread < 0:
         raise DatasetError("dynamic.min_buyback_spread must be >= 0")
+    if buyback_uptrend_lookback < 0:
+        raise DatasetError("dynamic.buyback_uptrend_lookback must be >= 0")
+    if not (0.0 <= buyback_stress_drawdown < 1.0):
+        raise DatasetError("dynamic.buyback_stress_drawdown must be in [0, 1)")
 
     return DynamicPolicy(
         lltv=lltv,
@@ -1015,6 +1032,9 @@ def build_dynamic_policy(raw: dict[str, Any]) -> DynamicPolicy:
         target_hf=target_hf,
         buyback_hf_floor=buyback_hf_floor,
         min_buyback_spread=min_buyback_spread,
+        buyback_uptrend_lookback=buyback_uptrend_lookback,
+        buyback_min_bounce=buyback_min_bounce,
+        buyback_stress_drawdown=buyback_stress_drawdown,
     )
 
 
@@ -1429,11 +1449,13 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
             buy_events = 0
 
             prev_hf, _, _ = risk_metrics(collateral, debt, first_price, lt)
+            price_history: list[float] = []
 
             for _, row in asset_prices.iterrows():
                 block_number = int(row["block_number"])
                 timestamp = str(row["timestamp"])
                 price = float(row["price_usd"])
+                price_history.append(price)
                 hf_now, ltv_now, cr_now = risk_metrics(collateral, debt, price, lt)
 
                 if scenario.dynamic_policy is not None:
@@ -1500,11 +1522,22 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                             hf_now, ltv_now, cr_now = risk_metrics(collateral, debt, price, lt)
 
                     buy_risk_guard_ltv = min(1.0, policy.lltv + policy.recovery_ltv_gap)
+                    # WHEN to buy: optional confirmed-upturn gate. Only buy if the
+                    # price has risen versus `lookback` steps ago, so the recovery
+                    # leg does not catch a falling knife during multi-leg crashes.
+                    uptrend_ok = True
+                    if policy.buyback_uptrend_lookback > 0:
+                        L = policy.buyback_uptrend_lookback
+                        if len(price_history) > L:
+                            recent_low = min(price_history[-(L + 1):])
+                            uptrend_ok = price >= recent_low * (1.0 + policy.buyback_min_bounce)
+                        else:
+                            uptrend_ok = False
                     should_buy = (
                         policy.enable_buyback
                         and policy.buyback_ratio > 0
-                        and
-                        ltv_now <= buy_risk_guard_ltv
+                        and uptrend_ok
+                        and ltv_now <= buy_risk_guard_ltv
                         and dynamic_state["outstanding_qty"] > 0
                         and (block_number - int(dynamic_state["last_buy_block"])) >= policy.buy_cooldown_steps
                     )
@@ -1538,6 +1571,18 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                                 )
                             else:
                                 borrow_capacity_usd = max(0.0, collateral * price * policy.lltv - debt)
+                            # HOW MUCH to buy: stress-tested cap. Size the reborrow so the
+                            # post-buy HF stays >= 1 even after a further `d` price drop
+                            # (same B* form with LT -> LT*(1-d)), so a buy made mid-decline
+                            # cannot re-arm the trigger on the next down-leg.
+                            d = policy.buyback_stress_drawdown
+                            if d > 0.0:
+                                lt_s = lt * (1.0 - d)
+                                if lt_s < 1.0:  # 1.0 = stress health floor
+                                    stress_capacity_usd = max(
+                                        0.0, (collateral * price * lt_s - 1.0 * debt) / (1.0 - lt_s)
+                                    )
+                                    borrow_capacity_usd = min(borrow_capacity_usd, stress_capacity_usd)
                             affordable_qty = max(0.0, borrow_capacity_usd / price)
                             eligible_qty = sum(float(lot["qty"]) for lot in eligible)
                             buy_qty = max(0.0, min(remaining_target, affordable_qty, eligible_qty))

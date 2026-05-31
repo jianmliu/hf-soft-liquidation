@@ -1,0 +1,20 @@
+\begin{table}[h!]
+\centering
+\caption{Out-of-sample sell-side governance dial (15 assets, 2019--2024, non-overlapping 270-day windows; no-buyback policy). Earlier triggers (lower $\mathrm{LLTV}$, with $\mathrm{HF}^{\star}$ raised for feasibility) trade borrower opportunity cost for protocol solvency: bad debt falls from $9{,}419$ to $265$ USD as $\mathrm{LLTV}$ goes $0.85\to0.70$, at a ${+}27\%$ borrower-loss cost. Every row Pareto-dominates the fixed-CF baseline (mean loss $48{,}389$, worst bad debt $26{,}555$, $31/95$ windows).}
+\label{tab:oos_sell_frontier}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}rrrrrrrr@{}}
+\toprule
+$\mathrm{LLTV}$ & $\mathrm{HF}^{\star}$ & trigger HF & Mean loss & Worst bad debt & Total bad debt & Windows w/ bad debt & Mean sells \\
+\midrule
+0.85 & 1.05 & 0.976 & 37,404 & 9,419 & 32,153 & 13/95 & 3.6 \\
+0.83 & 1.05 & 1.000 & 39,739 & 9,419 & 26,583 & 13/95 & 4.4 \\
+0.80 & 1.10 & 1.038 & 41,480 & 6,787 & 10,814 & 5/95 & 4.9 \\
+0.78 & 1.12 & 1.064 & 42,526 & 6,192 & 10,766 & 4/95 & 5.5 \\
+0.75 & 1.15 & 1.107 & 44,393 & 5,442 & 5,508 & 2/95 & 6.5 \\
+0.72 & 1.20 & 1.153 & 45,350 & 2,046 & 2,144 & 2/95 & 6.8 \\
+0.70 & 1.25 & 1.186 & 47,486 & 265 & 394 & 2/95 & 6.2 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}

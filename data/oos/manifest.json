@@ -1,0 +1,92 @@
+[
+  {
+    "symbol": "BTC",
+    "points": 2192,
+    "first": "2019-01-01",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "ETH",
+    "points": 2192,
+    "first": "2019-01-01",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "LTC",
+    "points": 2192,
+    "first": "2019-01-01",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "BCH",
+    "points": 2192,
+    "first": "2019-01-01",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "ETC",
+    "points": 2192,
+    "first": "2019-01-01",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "LINK",
+    "points": 2015,
+    "first": "2019-06-27",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "XLM",
+    "points": 2120,
+    "first": "2019-03-14",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "EOS",
+    "points": 2094,
+    "first": "2019-04-09",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "ZEC",
+    "points": 1485,
+    "first": "2020-12-08",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "XTZ",
+    "points": 1975,
+    "first": "2019-08-06",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "ADA",
+    "points": 1385,
+    "first": "2021-03-18",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "SOL",
+    "points": 1294,
+    "first": "2021-06-17",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "DOT",
+    "points": 1295,
+    "first": "2021-06-16",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "AVAX",
+    "points": 1189,
+    "first": "2021-09-30",
+    "last": "2024-12-31"
+  },
+  {
+    "symbol": "MATIC",
+    "points": 1392,
+    "first": "2021-03-11",
+    "last": "2024-12-31"
+  }
+]
