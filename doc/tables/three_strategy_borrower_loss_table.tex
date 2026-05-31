@@ -8,8 +8,8 @@
 Strategy & Mean loss (USD) & Median loss (USD) & Mean min HF & Mean restoration $\rho$ & Worst bad debt (USD) \\
 \midrule
 Traditional fixed CF & 14,359.80 & 2,753.10 & 0.9827 & 0.5842 & 27,623.95 \\
-Target-HF (no buyback) & 13,302.58 & 0.00 & 1.0270 & 0.5922 & 0.00 \\
-Target-HF + buyback (guarded) & 13,254.97 & 0.00 & 1.0270 & 0.5944 & 0.00 \\
+Aave-v4 baseline (sell-only) & 13,302.58 & 0.00 & 1.0270 & 0.5922 & 0.00 \\
+Proposal (target-HF + guarded buyback) & 13,254.97 & 0.00 & 1.0270 & 0.5944 & 0.00 \\
 \bottomrule
 \end{tabular}
 }
@@ -20,9 +20,9 @@ Target-HF + buyback (guarded) & 13,254.97 & 0.00 & 1.0270 & 0.5944 & 0.00 \\
 \toprule
 Pairwise borrower-loss win-rate (lower is better) & Value \\
 \midrule
-Target-HF + buyback vs Traditional fixed CF & 38.67\% (tie 44.33\%) \\
-Target-HF + buyback vs Target-HF (no buyback) & 9.00\% (tie 90.50\%) \\
-Target-HF (no buyback) vs Traditional fixed CF & 38.17\% (tie 44.33\%) \\
+Proposal vs legacy fixed CF & 38.67\% (tie 44.33\%) \\
+Proposal vs Aave-v4 baseline (the contribution) & 9.00\% (tie 90.50\%) \\
+Aave-v4 baseline vs legacy fixed CF & 38.17\% (tie 44.33\%) \\
 \bottomrule
 \end{tabular}
 \end{table}
