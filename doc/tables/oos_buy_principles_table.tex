@@ -1,0 +1,18 @@
+\begin{table}[h!]
+\centering
+\caption{Out-of-sample buy-side principle dial (15 assets; buyback vs no-buyback, clustered by window). The stress-drawdown $d$ (size so post-buy HF$\ge 1$ after a further $d$ drop) is the effective lever: raising it cuts buyback-induced re-liquidation and cleans up restoration/USD outcomes, at the cost of activation. A confirmed-upturn timing gate (not shown) adds little---one cannot reliably distinguish a bottom from a dead-cat bounce ex ante, so conservative \emph{sizing} beats \emph{timing}.}
+\label{tab:oos_buy_principles}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}rrrrrrr@{}}
+\toprule
+Stress $d$ & Active & Extra sells (mean) & Extra sells (max) & Restoration W/L & USD W/L (active) & USD $p$ \\
+\midrule
+0.00 & 52/95 & +0.58 & +6.3 & 26/22 & 22/7 & 0.024 \\
+0.15 & 52/95 & +0.58 & +6.3 & 26/22 & 22/7 & 0.024 \\
+0.25 & 38/95 & +0.15 & +3.0 & 24/11 & 16/3 & 0.000 \\
+0.30 & 28/95 & +0.07 & +2.0 & 20/7 & 10/3 & 0.003 \\
+0.35 & 21/95 & +0.02 & +2.0 & 16/4 & 8/2 & 0.010 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
