@@ -124,8 +124,8 @@ def batch_tables() -> dict:
     w_nf, t_nf = winrate(no, fix)
     srows = [
         ("Traditional fixed CF", fix.mean(), fix.median(), hf[SCN['fix']].mean(), rho[SCN['fix']].mean(), bd[SCN['fix']].max()),
-        ("Target-HF (no buyback)", no.mean(), no.median(), hf[SCN['no']].mean(), rho[SCN['no']].mean(), bd[SCN['no']].max()),
-        ("Target-HF + buyback (guarded)", buy.mean(), buy.median(), hf[SCN['buy']].mean(), rho[SCN['buy']].mean(), bd[SCN['buy']].max()),
+        ("Aave-v4 baseline (sell-only)", no.mean(), no.median(), hf[SCN['no']].mean(), rho[SCN['no']].mean(), bd[SCN['no']].max()),
+        ("Proposal (target-HF + guarded buyback)", buy.mean(), buy.median(), hf[SCN['buy']].mean(), rho[SCN['buy']].mean(), bd[SCN['buy']].max()),
     ]
     body = (
         "\\begin{table}[h!]\n\\centering\n"
@@ -137,9 +137,9 @@ def batch_tables() -> dict:
         + "\\bottomrule\n\\end{tabular}\n}\n\n\\vspace{0.35em}\n\n"
         "\\begin{tabular}{@{}p{0.64\\textwidth}r@{}}\n\\toprule\n"
         "Pairwise borrower-loss win-rate (lower is better) & Value \\\\\n\\midrule\n"
-        f"Target-HF + buyback vs Traditional fixed CF & {w_bf*100:.2f}\\% (tie {t_bf*100:.2f}\\%) \\\\\n"
-        f"Target-HF + buyback vs Target-HF (no buyback) & {w_bn*100:.2f}\\% (tie {t_bn*100:.2f}\\%) \\\\\n"
-        f"Target-HF (no buyback) vs Traditional fixed CF & {w_nf*100:.2f}\\% (tie {t_nf*100:.2f}\\%) \\\\\n"
+        f"Proposal vs legacy fixed CF & {w_bf*100:.2f}\\% (tie {t_bf*100:.2f}\\%) \\\\\n"
+        f"Proposal vs Aave-v4 baseline (the contribution) & {w_bn*100:.2f}\\% (tie {t_bn*100:.2f}\\%) \\\\\n"
+        f"Aave-v4 baseline vs legacy fixed CF & {w_nf*100:.2f}\\% (tie {t_nf*100:.2f}\\%) \\\\\n"
         "\\bottomrule\n\\end{tabular}\n\\end{table}\n"
     )
     write("three_strategy_borrower_loss_table.tex", body)
