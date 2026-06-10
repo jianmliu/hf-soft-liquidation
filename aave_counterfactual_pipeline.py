@@ -1522,15 +1522,17 @@ def run_counterfactual(dataset_dir: Path, scenario_path: Path, output_dir: Path,
                             hf_now, ltv_now, cr_now = risk_metrics(collateral, debt, price, lt)
 
                     buy_risk_guard_ltv = min(1.0, policy.lltv + policy.recovery_ltv_gap)
-                    # WHEN to buy: optional confirmed-upturn gate. Only buy if the
-                    # price has risen versus `lookback` steps ago, so the recovery
-                    # leg does not catch a falling knife during multi-leg crashes.
+                    # WHEN to buy: optional confirmed-bounce gate. Only buy if the
+                    # current price has recovered at least `min_bounce` above the
+                    # lowest of the PREVIOUS `lookback` prices (current price
+                    # excluded, otherwise the comparison is vacuously true), so the
+                    # recovery leg does not buy while the market is making new lows.
                     uptrend_ok = True
                     if policy.buyback_uptrend_lookback > 0:
                         L = policy.buyback_uptrend_lookback
                         if len(price_history) > L:
-                            recent_low = min(price_history[-(L + 1):])
-                            uptrend_ok = price >= recent_low * (1.0 + policy.buyback_min_bounce)
+                            prior_low = min(price_history[-(L + 1):-1])
+                            uptrend_ok = price >= prior_low * (1.0 + policy.buyback_min_bounce)
                         else:
                             uptrend_ok = False
                     should_buy = (
