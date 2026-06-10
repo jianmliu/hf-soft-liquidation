@@ -1,0 +1,255 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+
+\newtheorem{proposition}{Proposition}
+
+\title{Graduated, Restorative Enforcement for Trustless Bitcoin Vaults:\\
+Pre-Signed Soft Liquidation with Solvency-Sized Buyback}
+\author{Jianming Liu\\DefinanceX Capital}
+\date{Companion note to \emph{Target Health Factor based Soft Liquidation with
+Collateral Restoration for DeFi Lending} --- working draft}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Trustless Bitcoin vaults enforce loan terms through pre-signed transactions,
+covenant committees, and oracle attestations---and precisely because no party
+holds discretion at execution time, every deployed and proposed design we are
+aware of enforces liquidation as a \emph{binary} event: one hard price
+threshold, full seizure of the vault \cite{babylon-trustless-vaults,firefish-protocol}.
+For the BTC-denominated borrower this is the worst possible failure mode: a
+single oracle print can permanently remove their entire BTC position. We show
+that graduation and restoration are compatible with pre-signing. First,
+target-HF partial liquidation compiles to a \emph{geometric price ladder} whose
+rung prices and quantities are closed-form at vault creation
+(Proposition~\ref{prop:ladder}), hence pre-signable as tranched spending paths.
+Second, restoration is where pre-signing bites: the natural pre-signable rule
+---buy back exactly what was sold (fixed quantities)---was our original design,
+and it suffers severe ping-pong re-liquidation; on BTC 2019--2024 it executes
+$45\times$ more transactions for essentially zero net benefit. The cure from
+our companion paper, a solvency- and stress-sized buyback quantity
+$B^{\star}_{\text{stress}}(C,D,P)$, appears state-dependent and therefore
+un-pre-signable, but we show it compiles back to a finite pre-signed structure:
+constraining the band to unwind last-sold-first-bought collapses the reachable
+states to a contiguous-suffix family of size $O(N^2)$, each with closed-form
+$(C,D)$, so safe quantities can be computed and signed at origination
+(DLC-style, per oracle price bucket). Empirically, on identical BTC paths at
+native cadence, graduation alone halves borrower loss and cuts worst-case bad
+debt by three quarters versus full seizure, and the sized restoration matches
+the fixed design's outcome with $1/20$ of the executions.
+\end{abstract}
+
+\section{The problem: trustlessness forces binary enforcement}
+\label{sec:problem}
+
+Native-BTC lending holds collateral in Bitcoin script: multisig escrow with
+pre-signed transactions (Firefish \cite{firefish-protocol}), discreet log
+contracts (Lava), or, most recently, trustless vaults combining pre-signed
+spending conditions, a covenant committee, and oracle attestations
+(Babylon \cite{babylon-trustless-vaults}). The defining property of all three
+is that \emph{every state transition must be authorized in advance}: at
+execution time there is no party with discretion, so there is nothing to
+negotiate and no quantity to compute.
+
+The consequence is visible in the deployed designs. Babylon's vault paper
+specifies liquidation as: \emph{``if the price oracle releases a signature
+certifying that the BTC price has dropped below \$50,000''}, the liquidator
+repays the debt and \emph{``can redeem the BTC''}---the entire vault, in one
+step \cite{babylon-trustless-vaults}. Firefish prevents this outcome only by
+conservatism (50\% LTV and a multi-step margin call), not by graduation.
+There is no partial liquidation and no restoration anywhere in the stack:
+a single threshold crossing permanently converts the borrower's whole BTC
+position. On gap moves this is also bad for the \emph{lender}: the one
+liquidation executes far below the threshold, so full seizure coexists with
+large bad debt (Table~\ref{tab:native_btc_comparison}).
+
+On EVM lending, graduated liquidation already exists (Aave v4's target-HF
+engine) and our companion paper adds a guarded restoration leg as an
+incremental, optional module. On native BTC the situation is inverted: the
+baseline is the hard-threshold full seizure of 2019-era DeFi, the borrower
+population is BTC-denominated by construction, and the binding constraint is
+that any improvement must be \emph{pre-committable}. This note shows the two
+mechanisms of the companion paper---the target-HF band and the solvency-sized
+buyback---are exactly the closed-form objects that pre-signing requires.
+
+\section{Graduation compiles to a pre-signable geometric ladder}
+\label{sec:ladder}
+
+Consider the companion paper's sell rule: when $\mathrm{LTV}_t \ge
+\mathrm{LLTV}$, repay
+$\Delta D^{\star} = D\,(\mathrm{HF}^{\star}-\mathrm{HF}_t)/
+(\mathrm{HF}^{\star}-\mathrm{LT}(1+b))$, restoring the health factor to
+$\mathrm{HF}^{\star}$. Online, this is a state-dependent rule. Under monotone
+decline, however, it is equivalent to a fixed ladder computable at origination.
+
+\begin{proposition}[Pre-computable liquidation ladder]
+\label{prop:ladder}
+Fix $\mathrm{LT}$, $\mathrm{LLTV}$, $\mathrm{HF}^{\star}>\mathrm{LT}/\mathrm{LLTV}$,
+bonus $b$, and an initial position $(C_0, D_0)$ first triggering at price
+$P_1$. Under monotone price decline with continuous monitoring, the $k$-th
+partial liquidation of the online target-HF rule occurs at
+\[
+P_k \;=\; P_1\, r^{\,k-1},
+\qquad
+r \;=\; \frac{\mathrm{LT}}{\mathrm{HF}^{\star}\,\mathrm{LLTV}} \;<\; 1,
+\]
+and repays the constant debt fraction
+\[
+\varphi \;=\; \frac{\mathrm{HF}^{\star}-\mathrm{LT}/\mathrm{LLTV}}
+{\mathrm{HF}^{\star}-\mathrm{LT}(1+b)},
+\qquad
+D_k = D_0 (1-\varphi)^k ,
+\]
+with sale quantities $q_k = (1+b)\,\varphi D_{k-1}/P_k$. All rung prices and
+quantities are therefore closed-form at vault creation.
+\end{proposition}
+
+\begin{proof}
+At every trigger $\mathrm{LTV}=\mathrm{LLTV}$, i.e.\
+$\mathrm{HF}=\mathrm{LT}/\mathrm{LLTV}$, so the repair fraction
+$\Delta D^{\star}/D = \varphi$ is the same at every rung. The repair moves the
+position to $\mathrm{HF}=\mathrm{HF}^{\star}$, i.e.\
+$\mathrm{LTV}=\mathrm{LT}/\mathrm{HF}^{\star}$; with debt and collateral then
+fixed, $\mathrm{LTV}\propto 1/P$, so the next trigger
+($\mathrm{LTV}=\mathrm{LLTV}$) occurs after a further price factor
+$(\mathrm{LT}/\mathrm{HF}^{\star})/\mathrm{LLTV} = r$.
+\end{proof}
+
+With the baseline parameters ($\mathrm{LT}=0.83$, $\mathrm{LLTV}=0.85$,
+$\mathrm{HF}^{\star}=1.05$, $b=0.01$): $r = 0.930$ and $\varphi = 0.347$ ---
+rungs every $7\%$ down, each retiring about a third of the remaining debt.
+
+\paragraph{Vault mapping.} Tranche the collateral UTXO at origination so that
+rung $k$'s quantity $q_k$ sits in its own output, with a spending path
+authorized by an oracle attestation of $P \le P_k$ (plus debt-repayment proof,
+exactly as in the Babylon liquidation flow). Discrete oracle cadence makes
+execution conservative relative to the continuous idealization; our evaluation
+below uses daily cadence throughout. \emph{TODO: dust/fee analysis for the
+number of rungs $N$; re-signing checkpoints if the position is modified.}
+
+\section{Restoration: the fixed-buyback trap and its cure}
+\label{sec:restoration}
+
+\paragraph{The original design and its disease.} The restoration leg buys
+collateral back at the band bottom on recovery, reborrow-funded. The natural
+pre-signable quantity rule---and our original design---is \emph{fixed}: buy
+back exactly the rung quantities that were sold. It does not require state,
+so it can be signed at origination. But it is unsafe: a reborrow-funded buy
+of USD value $x$ adds equal collateral and debt and therefore \emph{lowers}
+the health factor; buying back a full rung mid-recovery re-arms the trigger,
+and the position ping-pongs---sell, buy, re-sell---burning the liquidation
+bonus (and, on Bitcoin, transaction fees and spread) on every cycle. The
+companion paper measured this on EVM paths (the unguarded leg increases
+borrower loss, $p\approx 7\times10^{-8}$); Table~\ref{tab:native_btc_comparison}
+measures it at native cadence: $3\times$ the liquidation events and $45\times$
+the executions of the sized rule, for essentially zero net benefit.
+
+\paragraph{The cure.} The companion paper's sizing rule caps each buy at
+\[
+B^{\star}_{\text{stress}}(C,D,P) \;=\;
+\max\!\left(0,\;
+\frac{\mathrm{LT}(1-d)\,C P - D}{1-\mathrm{LT}(1-d)}\right),
+\]
+the largest reborrow such that the post-buy health factor remains $\ge 1$ even
+after a further fractional drop $d$. This eliminates ping-pong, but it is a
+function of the live state $(C,D,P)$---seemingly incompatible with
+pre-signing.
+
+\paragraph{Compiling the cure back to pre-signed form.} The state dependence
+is an illusion once the unwind order is fixed:
+
+\begin{proposition}[LIFO compilation, sketch]
+\label{prop:lifo}
+Constrain the band to unwind last-sold-first-bought: rung $j$ may be bought
+back only if all rungs $j' > j$ sold after it have been bought back. Then the
+reachable inventory states are the contiguous-suffix family
+$\{(k,j): 0 \le j \le k \le N\}$ (sold down to rung $k$, bought back down to
+rung $j$), of size $O(N^2)$, and each state's $(C_{k,j}, D_{k,j})$ is
+closed-form at origination by Proposition~\ref{prop:ladder} plus the fixed
+buy levels. Hence $B^{\star}_{\text{stress}}$ can be evaluated per (state,
+oracle price bucket) at origination, and the corresponding buyback
+transactions pre-signed, DLC-style.
+\end{proposition}
+
+\emph{TODO: full proof with rebound-interleaving paths (buys between sells);
+transaction-count accounting $O(N^2 \times \text{buckets})$ against DLC CET
+practice; what fraction of the online rule's benefit survives bucketing.}
+
+In architectures with on-chain verification (Babylon's covenant committee and
+zero-knowledge proofs), compilation is unnecessary: the closed-form inequality
+$x \le B^{\star}_{\text{stress}}(C,D,P_{\text{oracle}})$ is trivially provable,
+and the quantity rule can be enforced directly.
+
+\section{Evaluation at native cadence}
+\label{sec:eval}
+
+We compare four enforcement designs on identical BTC paths (daily Coinbase
+prices 2019--2024, eight non-overlapping 270-day windows, three initial CR
+levels, healthy starts; the window set includes the March-2020 single-day
+crash). Daily cadence approximates the oracle/confirmation tempo of native-BTC
+execution. The full-seizure arm models the Babylon flow (liquidator repays the
+debt and redeems the vault's BTC).
+
+\IfFileExists{tables/native_btc_comparison_table.tex}{
+\input{tables/native_btc_comparison_table.tex}
+}{}
+
+Three observations. (i) \textbf{Graduation is the headline}: replacing the
+hard threshold with the pre-committed ladder halves mean borrower loss
+($45{,}303 \to 22{,}497$ USD), raises BTC retention from $0.375$ to $0.465$,
+and cuts worst-case bad debt by three quarters ($29{,}808 \to 7{,}260$)---full
+seizure is bad for \emph{both} sides, because on a gap the single liquidation
+executes far below the threshold. In the March-2020 window the contrast is
+starkest ($89{,}860$ vs.\ $67{,}312$ mean loss). (ii) \textbf{The fixed
+buyback churns}: $6.25$ sells and $40.6$ buys per run versus $2.1$ and $0.9$
+for the sized rule, with net outcomes indistinguishable---in a setting where
+every execution is an on-chain transaction, this is pure friction, and it is
+the quantitative form of the ping-pong observed in the original design.
+(iii) \textbf{The sized rule is execution-minimal}: same retention and loss
+as fixed buyback at $1/20$ the executions, and no induced re-liquidation
+($2.1$ sells, equal to the no-buyback ladder).
+
+\emph{Honest caveats: eight independent windows, one asset; at daily cadence
+within 270-day windows the restoration legs are largely dormant, so this
+table quantifies graduation and churn, not restoration upside (see the
+companion paper's crash-regime results for the latter); the oracle is trusted
+in all arms, as in the deployed designs.}
+
+\section{Related work}
+Babylon trustless vaults (hard threshold, full seizure)
+\cite{babylon-trustless-vaults}; Firefish and DLC lending (pre-signed,
+full liquidation, prevented only by conservative LTV)
+\cite{firefish-protocol}; Curve LLAMMA (graduated and restorative, but
+AMM-mediated and crvUSD-denominated---not expressible as pre-signed Bitcoin
+spending paths) \cite{curve-llamma}; Aave v4 target-HF (graduated, sell-only,
+EVM) \cite{aave-v4-liquidations}; reversible call options (averts liquidation
+via external top-ups rather than restoring sold collateral)
+\cite{mahmood2023miqado}. To our knowledge no prior design offers graduated
+\emph{and} restorative enforcement compatible with pre-signed execution.
+
+\section{Conclusion}
+In trustless vaults, enforcement has been binary not because anyone prefers
+cliffs, but because pre-commitment seemed to demand fixed actions. The
+target-HF band turns out to be a geometric, origination-time-computable
+ladder, and the solvency-sized restoration---whose fixed-quantity ancestor we
+built first and watched ping-pong---compiles back to a finite pre-signed
+structure under LIFO unwind. Graduated, restorative, BTC-denominated lending
+is therefore implementable on today's trustless-vault architectures, and the
+measured stakes are large: half the borrower loss and a quarter of the bad
+debt of the status quo, before any restoration upside.
+
+\paragraph{Reproducibility.} The four-arm comparison and its table are
+generated by \path{runs/sweeps/native_btc_comparison.py} in the companion
+repository; the engine, data, and the companion paper's full evaluation
+pipeline are described there.
+
+\bibliographystyle{abbrvnat}
+\bibliography{references}
+
+\end{document}

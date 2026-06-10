@@ -1,0 +1,17 @@
+\begin{table}[h!]
+\centering
+\caption{Four enforcement designs on identical BTC paths (2019--2024, eight non-overlapping 270-day windows $\times$ three initial CR levels, daily cadence $\approx$ native-BTC oracle tempo). Graduation alone halves borrower loss and cuts worst bad debt by $3/4$ versus full seizure; the fixed buyback of the original pre-signed design churns ($3\times$ the liquidations, $45\times$ the executions) for $\approx$zero net gain; the solvency/stress-sized rule matches its outcome with $1/20$ of the executions.}
+\label{tab:native_btc_comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Design & BTC retention $\rho$ & Mean loss (USD) & Worst bad debt (USD) & Sells/run & Buys/run \\
+\midrule
+Hard threshold, full seizure (status quo) & 0.375 & 45,303 & 29,808 & 0.62 & 0.00 \\
+Pre-committed target-HF ladder & 0.464 & 22,497 & 7,260 & 2.12 & 0.00 \\
+Ladder + fixed buyback (original design) & 0.466 & 22,388 & 7,051 & 6.25 & 40.62 \\
+Ladder + solvency/stress-sized buyback & 0.466 & 22,482 & 7,260 & 2.12 & 0.92 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
