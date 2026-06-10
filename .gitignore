@@ -24,7 +24,7 @@ doc/*.fls
 doc/*.log
 doc/*.out
 doc/*.synctex.gz
-doc/main.pdf
+doc/*.pdf
 
 # Notebook / temp
 *.ipynb_checkpoints
