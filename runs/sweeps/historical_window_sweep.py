@@ -48,11 +48,11 @@ def build_scenario(
         # re-liquidation that an unguarded (borrow-to-LLTV) buyback induces.
         "buyback_hf_floor": 1.20,
         "min_buyback_spread": 0.05,
-        # OOS-optimized buy principles: stress-tested sizing (survive a further
-        # 25% drop) is the effective lever on multi-leg crashes; a light
-        # confirmed-upturn gate adds little. See runs/sweeps/optimize_buy_principles.py.
+        # OOS-optimized buy principle: stress-tested sizing (survive a further
+        # 25% drop) is the effective lever on multi-leg crashes. The optional
+        # confirmed-bounce timing gate (buyback_uptrend_lookback/min_bounce) adds
+        # little and is left off by default. See optimize_buy_principles.py.
         "buyback_stress_drawdown": 0.25,
-        "buyback_uptrend_lookback": 5,
     }
     return [
         {

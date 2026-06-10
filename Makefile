@@ -1,9 +1,36 @@
 # Portable: defaults to the project venv, override with e.g. `make PYTHON=python3 ...`.
 PYTHON ?= ./.venv/bin/python
+RUN := PYTHONHASHSEED=0 $(PYTHON)
 
-.PHONY: reproduce cf-init cf-validate cf-sim cf-report cf-batch cf-batch-topn cf-batch-closures cf-collect-subgraph cf-collect-dune cf-list-presets cf-bootstrap-market
-reproduce:
-	$(PYTHON) band_based_lending_simulation.py --build-paper
+.PHONY: paper paper-insample paper-oos tables test \
+	cf-init cf-validate cf-sim cf-report cf-batch cf-batch-topn cf-batch-closures \
+	cf-collect-subgraph cf-collect-dune cf-list-presets cf-bootstrap-market
+
+# --- Paper reproduction pipeline (see README) ---------------------------------
+paper: paper-insample paper-oos
+
+paper-insample:
+	$(RUN) runs/sweeps/historical_window_sweep.py
+	$(RUN) runs/sweeps/real_window_batch.py
+	$(RUN) runs/sweeps/synthetic_stress_batch.py
+	$(RUN) runs/sweeps/hf_floor_sweep.py
+	$(RUN) runs/sweeps/make_paper_tables.py
+
+paper-oos:
+	$(RUN) runs/sweeps/fetch_oos_data.py
+	$(RUN) runs/sweeps/oos_validation.py
+	$(RUN) runs/sweeps/sell_side_oos_sweep.py
+	$(RUN) runs/sweeps/optimize_buy_principles.py
+	$(RUN) runs/sweeps/make_oos_tables.py
+
+tables:
+	$(RUN) runs/sweeps/make_paper_tables.py
+	$(RUN) runs/sweeps/make_oos_tables.py
+
+test:
+	$(RUN) tests/test_invariants.py
+
+# --- Engine CLI helpers --------------------------------------------------------
 
 cf-init:
 	$(PYTHON) aave_counterfactual_pipeline.py init-dataset --dataset-dir data/aave

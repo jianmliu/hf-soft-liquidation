@@ -16,7 +16,6 @@
       "min_buyback_spread": 0.05,
       "enable_buyback": true,
       "buy_cooldown_steps": 1,
-      "buyback_uptrend_lookback": 5,
       "buyback_stress_drawdown": 0.25
     }
   },
