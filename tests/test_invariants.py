@@ -172,6 +172,43 @@ def test_end_to_end_guarantees():
     assert out[False]["acct"].max_bad_debt_usd == 0.0
 
 
+def test_geometric_ladder():
+    """Proposition (companion note): under monotone decline, online target-HF
+    repair is a geometric ladder with ratio r = LT/(HF*·LLTV) and constant
+    per-rung debt fraction phi = (HF*-LT/LLTV)/(HF*-LT(1+b))."""
+    tmp = ROOT / "runs" / "test_tmp_ladder"
+    shutil.rmtree(tmp, ignore_errors=True)
+    (tmp / "normalized").mkdir(parents=True, exist_ok=True)
+    prices = np.linspace(3000, 1500, 3000)  # fine grid ~ continuous monitoring
+    pd.DataFrame({
+        "block_number": np.arange(len(prices)),
+        "timestamp": pd.date_range("2024-01-01", periods=len(prices), freq="min").astype(str),
+        "asset_symbol": "WETH", "price_usd": prices,
+    }).to_csv(tmp / "normalized" / "prices.csv", index=False)
+    pd.DataFrame([{"account": "x", "asset_symbol": "WETH", "collateral_amount": 1.0,
+                   "debt_amount": 100_000.0, "liquidation_threshold": LT,
+                   "initial_cr": 1.30}]).to_csv(tmp / "normalized" / "positions_initial.csv", index=False)
+    scn = [{"name": "d", "dynamic": dict(
+        lltv=0.85, target_hf=1.05, min_close_factor=0.15, max_close_factor=0.60,
+        cf_slope=1.6, liquidation_bonus=0.01, buyback_ratio=0.2,
+        buyback_funding="reborrow", enable_buyback=False, recovery_ltv_gap=0.08,
+        sell_cooldown_steps=1, buy_cooldown_steps=1_000_000)}]
+    sp = tmp / "s.json"
+    sp.write_text(json.dumps(scn), encoding="utf-8")
+    rd = M.run_counterfactual(dataset_dir=tmp, scenario_path=sp,
+                              output_dir=tmp / "r", run_id="ladder")
+    sells = pd.read_csv(rd / "event_log.csv").query("event == 'SELL'").reset_index()
+    assert len(sells) >= 6
+    r_theory = LT / (1.05 * 0.85)
+    phi_theory = (1.05 - LT / 0.85) / (1.05 - LT * 1.01)
+    ratios = sells.price_usd.to_numpy()[1:] / sells.price_usd.to_numpy()[:-1]
+    assert np.allclose(ratios, r_theory, atol=2e-3), ratios
+    debt = 100_000.0
+    for dd in sells.debt_repaid:
+        assert abs(dd / debt - phi_theory) < 2e-3, dd / debt
+        debt -= dd
+
+
 def test_bounce_gate_blocks():
     tmp = ROOT / "runs" / "test_tmp_gate"
     shutil.rmtree(tmp, ignore_errors=True)
